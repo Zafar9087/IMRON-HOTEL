@@ -1854,6 +1854,15 @@ var thumbs = [
       max-width: none;
       display: none;
     }
+
+html {
+  overflow-x: clip;
+}
+
+body {
+  width: 100%;
+  max-width: 100%;
+}
 </style>
 <script>
         // Функция отправки на вебхук
@@ -1899,4 +1908,135 @@ var thumbs = [
             }
         });
     </script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  // Find the booking form (the form directly after the "Book Your Stay" heading)
+  const bookingForm = document.querySelector('.premium-card h3 + form') || document.querySelector('#bookingForm');
+  if (!bookingForm) return;
+
+  const guests = bookingForm.querySelector('#guests');
+  const checkIn = bookingForm.querySelector('#checkIn');
+  const checkOut = bookingForm.querySelector('#checkOut');
+  const submitBtn = bookingForm.querySelector('button[type="submit"]');
+  const inputsGrid = bookingForm.querySelector('.grid.grid-cols-1') || bookingForm.querySelector('div.grid');
+
+  // Configure your real contact targets here
+  const whatsappBase = 'https://wa.me/998997503211';
+  const maxBase = 'https://max.example.com/send'; // replace with your Max account URL
+  const telegramBase = 'https://t.me/Imronhotel'; // Telegram link for @Imronhotel
+
+  // Create links container and stylish buttons with icons
+  const linksWrap = document.createElement('div');
+  linksWrap.id = 'bookingLinks';
+  linksWrap.style.display = 'none';
+  linksWrap.style.marginTop = '12px';
+  linksWrap.style.gap = '12px';
+  linksWrap.style.display = 'flex';
+  linksWrap.style.flexWrap = 'wrap';
+
+  function makeButton(id, label, bg, svgHtml) {
+    const a = document.createElement('a');
+    a.id = id;
+    a.setAttribute('aria-label', label);
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.href = '#';
+    a.className = 'btn-contact';
+    a.style.display = 'inline-flex';
+    a.style.alignItems = 'center';
+    a.style.gap = '10px';
+    a.style.padding = '10px 14px';
+    a.style.borderRadius = '10px';
+    a.style.color = '#fff';
+    a.style.textDecoration = 'none';
+    a.style.fontWeight = '600';
+    a.style.boxShadow = '0 8px 30px rgba(16,24,40,0.15)';
+    a.style.background = bg;
+    a.innerHTML = (svgHtml || '') + '<span style="display:inline-block; line-height:1">' + label + '</span>';
+    return a;
+  }
+
+  // SVG icons
+  const svgWhatsapp = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M21.71 20.29l-4.34-1.24a8.72 8.72 0 0 1-4.53-2.88 8.92 8.92 0 0 1-1.91-5.31c0-4.96 4.02-9 9-9s9 4.04 9 9c0 2.44-.92 4.72-2.59 6.43a1 1 0 0 1-.63.39z" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const svgTelegram = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M22 3L2 12.5l5 1.8L9 21l3.5-2 4.8 3.3L22 3z" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const svgMax = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="#fff" stroke-width="1.2"/><path d="M8 12c1.333-2 2.667-2 4 0 1.333 2 2.667 2 4 0" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  const waBtn = makeButton('btnWhatsapp', 'WhatsApp', 'linear-gradient(90deg,#25D366,#27B04B)', svgWhatsapp);
+  const maxBtn = makeButton('btnMax', 'Max', 'linear-gradient(90deg,#6F42C1,#5A2EB8)', svgMax);
+  const tgBtn = makeButton('btnTelegram', 'Telegram', 'linear-gradient(90deg,#0088cc,#006699)', svgTelegram);
+
+  linksWrap.appendChild(waBtn);
+  linksWrap.appendChild(maxBtn);
+  linksWrap.appendChild(tgBtn);
+
+  function allFilled() {
+    return guests && guests.value && checkIn && checkIn.value && checkOut && checkOut.value;
+  }
+
+  function updateLinks() {
+    const message = `Booking request: ${guests ? guests.value : ''} guests, from ${checkIn.value} to ${checkOut.value}`;
+    waBtn.href = whatsappBase + '?text=' + encodeURIComponent(message);
+    maxBtn.href = maxBase + '?text=' + encodeURIComponent(message);
+    tgBtn.href = telegramBase; // Telegram deep-link can vary; use channel/user link or share URL
+  }
+
+  // Replace the submit button with the contact buttons after validation
+  if (submitBtn) {
+    submitBtn.addEventListener('click', function (e) {
+      e.preventDefault();
+      if (!allFilled()) {
+        if (guests && !guests.value) { guests.focus(); return; }
+        if (checkIn && !checkIn.value) { checkIn.focus(); return; }
+        if (checkOut && !checkOut.value) { checkOut.focus(); return; }
+      }
+      updateLinks();
+      // hide the input fields (guests, checkIn, checkOut)
+      if (inputsGrid) inputsGrid.style.display = 'none';
+      // hide the original booking title
+      try {
+        const card = bookingForm.closest('.premium-card');
+        if (card) {
+          const originalTitle = card.querySelector('h3');
+          if (originalTitle) originalTitle.style.display = 'none';
+        }
+      } catch (err) { }
+
+      // create and insert heading "Contacts with us" above the buttons
+      let heading = document.getElementById('bookingContactsHeading');
+      if (!heading) {
+        heading = document.createElement('div');
+        heading.id = 'bookingContactsHeading';
+        heading.textContent = 'Contacts with us';
+        heading.style.fontSize = '18px';
+        heading.style.fontWeight = '700';
+        heading.style.margin = '8px 0';
+        heading.style.color = '#111827';
+      }
+      if (submitBtn && submitBtn.parentNode) {
+        // make buttons share available width
+        linksWrap.style.width = submitBtn.offsetWidth ? submitBtn.offsetWidth + 'px' : '100%';
+        linksWrap.style.justifyContent = 'space-between';
+        // make each button flexible to occupy equal space
+        [waBtn, maxBtn, tgBtn].forEach(function(b) { b.style.flex = '1'; b.style.textAlign = 'center'; b.style.color = '#fff'; });
+        try {
+          // insert heading then replace submit with linksWrap
+          submitBtn.parentNode.insertBefore(heading, submitBtn);
+          submitBtn.parentNode.replaceChild(linksWrap, submitBtn);
+        } catch (err) {
+          // fallback to inserting and hiding
+          submitBtn.style.display = 'none';
+          if (!submitBtn.parentNode.contains(heading)) submitBtn.parentNode.insertBefore(heading, submitBtn.nextSibling);
+          if (!submitBtn.parentNode.contains(linksWrap)) submitBtn.parentNode.insertBefore(linksWrap, submitBtn.nextSibling);
+        }
+      } else {
+        bookingForm.appendChild(linksWrap);
+      }
+      linksWrap.style.display = 'flex';
+      linksWrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  }
+});
+</script>
+
 <div id="tr-popup" class="bobotik" class="tr-popup" translate="no" data-hidden="true" data-invalid="true" data-disabled="false" lang="ru" data-expanded="false" data-menu="false" data-translation="Добро пожаловать вотель IMRONТрадиционное узбекское гостеприимство в сочетании с современным комфортом" data-menu-position="left" data-submitted="false" style="top: 324px; left: 752px;"><div class="tr-popup__block"><span class="tr-popup__title_original">Оригинальный текст:</span> <span class="tr-popup__value">Welcome toIMRON HOTELTraditional Uzbek Hospitality Meets Modern Comfort</span></div><div class="tr-popup__block tr-popup__block_a"><span class="tr-popup__link tr-popup__link_suggest" data-action="expand">Предложить перевод</span><a href="https://translate.yandex.ru" class="tr-popup__link tr-popup__link_service" target="_blank" data-action="navigate"><span class="tr-popup__logo tr-popup__logo_company"></span><span class="tr-popup__logo tr-popup__logo_service"></span></a></div><div class="tr-popup__block tr-popup__block_b"><textarea class="tr-popup__input" spellcheck="false" autocapitalize="off" autocorrect="off" autocomplete="off" maxlength="1000"></textarea><div class="tr-popup__block tr-popup__block_submit"><span role="button" class="tr-popup__button tr-popup__button_submit" data-action="send">Отправить</span></div><div class="tr-popup__overlay tr-popup__overlay_submitted">Спасибо, перевод отправлен</div></div><span role="button" class="tr-popup__button tr-popup__button_close" data-action="clickClose"></span><span role="button" class="tr-popup__button tr-popup__button_menu" data-action="clickMenu"><span class="tr-popup__menu" data-action="disablePopup">Отключить подсказку с оригинальным текстом</span></span><span class="tr-popup__arrow"></span></div></body></html>
